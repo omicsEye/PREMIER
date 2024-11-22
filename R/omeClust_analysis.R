@@ -1,12 +1,16 @@
 library(plyr)
 library(ggplot2)
+library(pheatmap)
 
 # installation: https://github.com/omicsEye/omicsArt
 library(omicsArt)
 
 
 setwd("~/Downloads")
-metabolites_filtered = metabolites[, head(order(sapply(metabolites, var), decreasing = TRUE), 50)]
+
+metabolites_norm <- as.data.frame(lapply(metabolites, function(x) x / max(x, na.rm = TRUE)))
+rownames(metabolites_norm) <- rownames(metabolites)
+metabolites_filtered = metabolites_norm[, c(which(names(metabolites_norm) %in% c("BCAA", "Ile", "Leu", "Val")), head(order(sapply(metabolites_norm, var), decreasing = TRUE), 50))]
 
 fakepcl <- list(
   meta = metadata,
@@ -16,14 +20,15 @@ fakepcl <- list(
 )
 metabolites_heat_plot <- omicsArt:::pcl.heatmap(
   fakepcl,
-  sqrtspace = T,
-  gamma = 4,
+  sqrtspace = F,
+  gamma = 1,
   meta = T,
   show_colnames = F,
   show_rownames = T,
   treeheight_row = 0,
   treeheight_col = 5
 )
+metabolites_heat_plot
 ggsave(
   filename = 'metabolites_heat_plot.png',
   plot = metabolites_heat_plot,
@@ -86,8 +91,8 @@ if (do_write) {
     row.names = T
   )
   write.table(
-    proteins,
-    "proteins_processed.txt",
+    metabolites,
+    "metabolites_processed.txt",
     sep = "\t",
     eol = "\n",
     quote = F,
@@ -98,12 +103,12 @@ if (do_write) {
 
 # calculate similarity between samples based on omics measurements
 library(vegan)
-veg_dist <- as.matrix(vegdist(proteins, method = "bray", na.rm = T))
+veg_dist <- as.matrix(vegdist(metabolites_norm, method = "bray", na.rm = T))
 
 #  write the  in you computer as a tab-delimited file
 write.table(
   veg_dist,
-  'proteins_disatnce.txt',
+  'metabolites_disatnce.txt',
   sep = "\t",
   eol = "\n",
   na = "",
@@ -115,7 +120,10 @@ write.table(
 
 #### omeClust ######
 # run omeClust from command line
-# omeClust -i distance.txt --metadata metadata.txt -o omeClust_output_meta"
+# omeClust -i metabolites_disatnce.txt --metadata metadata_processed.txt -o omeClust_output_PREMIER
 
-# omeClustviz omeClust_output_meta/adist.txt omeClust_output_meta/clusters.txt --metadata metadata_processed.txt --shapeby INTERVENTION -o omeClust_output_meta/
-# omeClustviz omeClust_output_meta/adist.txt omeClust_output_meta/clusters.txt --metadata metadata_processed.txt --shapeby Visit -o omeClust_output_meta/
+# omeClustviz omeClust_output_PREMIER/adist.txt omeClust_output_PREMIER/clusters.txt --metadata metadata_processed.txt --shapeby INTERVENTION -o omeClust_output_PREMIER/
+# omeClustviz omeClust_output_PREMIER/adist.txt omeClust_output_PREMIER/clusters.txt --metadata metadata_processed.txt --shapeby Visit -o omeClust_output_PREMIER/
+# omeClustviz omeClust_output_PREMIER/adist.txt omeClust_output_PREMIER/clusters.txt --metadata metadata_processed.txt --shapeby STUDY_ID -o omeClust_output_PREMIER/
+
+
